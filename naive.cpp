@@ -4,7 +4,9 @@
 #include <string>
 #include <fstream>
 #include <math.h>
-#include <Eigen/Sparse>
+// #include <Eigen/Sparse>
+#include <time.h>
+#include <sys/time.h>
 //#include <unsupported/Eigen/SparseExtra>
 
 //this program will assume a 98x98x98 grid with 2 cells of zero padding for the E fields
@@ -13,6 +15,15 @@
 
 //This version is a very naive version without matrix versions of the calculations
 using namespace std;
+
+double get_wall_time(){
+    struct timeval time;
+    if (gettimeofday(&time,NULL)){
+        //  Handle error
+        return 0;
+    }
+    return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
 
 int nx, ny, nz;
 double dx, dy, dz;
@@ -185,7 +196,11 @@ int main() {
 	int outind;
 
 	double newex, newey, newez, newhx, newhy, newhz;
+
+	double difference, w_start, w_finish;
+
 	// cout << lx;
+	w_start = get_wall_time();
 	while (t<tf) {
 		cout << "t = " <<t <<endl;
 		// set the source value for the incoming plane wave at x boundary
@@ -285,6 +300,12 @@ int main() {
 		t += dt;
 		a += 1;
 	}
+	w_finish = get_wall_time();
+	difference = w_finish - w_start;
+
+    cout << "Naive: " << difference << " seconds\n";
+
+
 	probef.flush();
 	probef.close();
 	probef2.flush();
