@@ -235,32 +235,12 @@ int main() {
 			probef << endl;
 			probef2 << endl;
 		};
+		// Calculate the E-fields first (this allows )
 		// loop bounds for E-fields are 1 to Nx-1 to avoid overwritting the boundary conditions
 		for (int i = 1; i < lx; i++) {
 			// ex[i][0][0] = source(t);
 			for (int j = 1; j < ly; j++) {
 				for (int k = 1; k < lz; k++) {
-
-					//calculate the magnetic fields
-					int l, m, n;
-					l = i - 1;
-					m = j - 1;
-					n = k - 1;
-					// cout << l << " " << m << " " << n << endl;
-					newhx = calc_int(3,l,m,n);
-					hx[l][m][n] = newhx;
-					// hy[i][j][k] = calc_int(4,l,m,n);
-					newhz = calc_int(5,l,m,n);
-					hz[l][m][n] = newhz;
-
-					newhy = calc_int(4,l,m,n);
-					hy[l][m][n] = newhy;
-					// if (!(l == 49 && m == 49 && n == 49)) {
-					// 	newhy = calc_int(4,l,m,n);
-					// 	hy[l][m][n] = newhy;
-					// };
-
-					// ex[i][j][k] = calc_int(0,i,j,k);
 					newey = calc_int(1,i,j,k);
 					ey[i][j][k] = newey;
 					newez = calc_int(2,i,j,k);
@@ -292,6 +272,17 @@ int main() {
 
 
 					// cout <<"calculated H: " << i << "\t" << j <<"\t" << k << endl;
+				}
+			}
+		}
+
+		// Calculate H-fields
+		for (int l = 0; l < lx; l += 1) {
+			for (int m = 0; m <ly; m += 1) {
+				for (int n = 0; n < lz; n += 1) {
+					hx[l][m][n] = calc_int(3,l,m,n);
+					hy[l][m][n] = calc_int(4,l,m,n);
+					hz[l][m][n] = calc_int(5,l,m,n);
 				}
 			}
 		}
