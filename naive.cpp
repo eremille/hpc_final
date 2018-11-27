@@ -149,9 +149,11 @@ double magn(double x, double y, double z) {
 // frunction to write out the magnitude of the E-field to a file
 int write_to(ofstream& f, double t, int ind, int stride) {
 	f << t;
-	for (int i = 0; i <= nx; i+=stride) {
+	int i;
+	for (i = 0; i < nx; i+=stride) {
 		f << "\t" << magn(ex[ind][i][49],ey[ind][i][49],ez[ind][i][49]);
 	}
+	f << "\t" << ind << "\t" << i << "\t" << 49;
 	f << endl;
 	return 0;
 }
@@ -164,7 +166,7 @@ int main() {
 	dx = 1;
 	dy = 1;
 	dz = 1;
-	dt = 1e-10;
+	dt = 1e-9;
 	// cout << "middle element is: " << ex[49][49][49] << endl;
 	//the courant condition for 1 meter is 1.9e-9
 	//final time be 1e-6 (for 1000 time steps)
@@ -235,6 +237,18 @@ int main() {
 			probef << endl;
 			probef2 << endl;
 		};
+
+
+		// Calculate H-fields
+		for (int l = 0; l < lx; l += 1) {
+			for (int m = 0; m < ly; m += 1) {
+				for (int n = 0; n < lz; n += 1) {
+					hx[l][m][n] = calc_int(3,l,m,n);
+					hy[l][m][n] = calc_int(4,l,m,n);
+					hz[l][m][n] = calc_int(5,l,m,n);
+				}
+			}
+		}
 		// Calculate the E-fields first (this allows )
 		// loop bounds for E-fields are 1 to Nx-1 to avoid overwritting the boundary conditions
 		for (int i = 1; i < lx; i++) {
@@ -276,16 +290,6 @@ int main() {
 			}
 		}
 
-		// Calculate H-fields
-		for (int l = 0; l < lx; l += 1) {
-			for (int m = 0; m <ly; m += 1) {
-				for (int n = 0; n < lz; n += 1) {
-					hx[l][m][n] = calc_int(3,l,m,n);
-					hy[l][m][n] = calc_int(4,l,m,n);
-					hz[l][m][n] = calc_int(5,l,m,n);
-				}
-			}
-		}
 
 
 		t += dt;
