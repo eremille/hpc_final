@@ -22,5 +22,8 @@ opt3: naive.cpp
 test: naive_v2.cpp
 	$(CXX) -O3 -o naive2 naive_v2.cpp
 
+parallel: parallel.cu
+	nvcc parallel.cu -o parallel -arch=sm_35 -D_FORCE_INLINES
+
 run:
 	./create_dmats
