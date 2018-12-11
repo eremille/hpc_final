@@ -19,5 +19,8 @@ opt2: naive.cpp
 opt3: naive.cpp
 	$(CXX) -O3 -o opt3 naive.cpp
 
+test: naive_v2.cpp
+	$(CXX) -O3 -o naive2 naive_v2.cpp
+
 run:
 	./create_dmats
