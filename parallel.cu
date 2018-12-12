@@ -42,8 +42,6 @@ __device__ double Calc(double exn, double hzp, double hzn, double hyp, double hy
 __global__ void Set_H_X(double* hx, double* ey, double* ez, double mu, int size, double dt) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   // don't do anything for any thread ids that are greater
-  dt = 1e-9;
-  printf("%f\n", dt);
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
 
@@ -94,7 +92,7 @@ __global__ void Set_E_X(double* ex, double* hz, double* hy, double eps, int size
 
     old = ex[tid];
 		t1p = hz[tid];
-	  t1n = hz[tid-E_SIZE];
+	  t1n = hz[tid-H_SIZE];
 	  t2p = hy[tid];
 		t2n = hy[tid-1];
     ex[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
@@ -111,7 +109,7 @@ __global__ void Set_E_Y(double* ey, double* hx, double* hz, double eps, int size
 		t1p = hx[tid];
 	  t1n = hx[tid-1];
 	  t2p = hz[tid];
-		t2n = hz[tid-E_SIZE*E_SIZE];
+		t2n = hz[tid-H_SIZE*H_SIZE];
     ey[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
   }
 }
@@ -124,9 +122,9 @@ __global__ void Set_E_Z(double* ez, double* hy, double* hx, double eps, int size
 
     old = ez[tid];
 		t1p = hy[tid];
-	  t1n = hy[tid-E_SIZE*E_SIZE];
+	  t1n = hy[tid-H_SIZE*H_SIZE];
 	  t2p = hx[tid];
-		t2n = hx[tid-E_SIZE];
+		t2n = hx[tid-H_SIZE];
     ez[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
   }
 }
@@ -289,6 +287,12 @@ int main() {
     ez[i] = 0;
   }
 
+  for (int i = 0; i < h_size; i++) {
+    hx[i] = 0;
+    hy[i] = 0;
+    hz[i] = 0;
+  }
+
   // cuda variables
   double *d_ex, *d_ey, *d_ez, *d_hx, *d_hy, *d_hz;
 
@@ -359,17 +363,17 @@ int main() {
 
     Set_H_X<<<numBlocksH, threadsPerBlock>>>(d_hx, d_ey, d_ez, mu, h_size, dt);
     cudaDeviceSynchronize();
-    // Set_H_Y<<<numBlocksH, threadsPerBlock>>>(d_hy, d_ez, d_ex, mu, h_size, dt);
-    // cudaDeviceSynchronize();
-    // Set_H_Z<<<numBlocksH, threadsPerBlock>>>(d_hz, d_ex, d_ey, mu, h_size, dt);
-    // cudaDeviceSynchronize();
-    //
-    // Set_E_X<<<numBlocksE, threadsPerBlock>>>(d_ex, d_hz, d_hy, eps, e_size, dt);
-    // cudaDeviceSynchronize();
-    // Set_E_Y<<<numBlocksE, threadsPerBlock>>>(d_ey, d_hx, d_hz, eps, e_size, dt);
-    // cudaDeviceSynchronize();
-    // Set_E_Z<<<numBlocksE, threadsPerBlock>>>(d_ez, d_hy, d_hx, eps, e_size, dt);
-    // cudaDeviceSynchronize();
+    Set_H_Y<<<numBlocksH, threadsPerBlock>>>(d_hy, d_ez, d_ex, mu, h_size, dt);
+    cudaDeviceSynchronize();
+    Set_H_Z<<<numBlocksH, threadsPerBlock>>>(d_hz, d_ex, d_ey, mu, h_size, dt);
+    cudaDeviceSynchronize();
+
+    Set_E_X<<<numBlocksE, threadsPerBlock>>>(d_ex, d_hz, d_hy, eps, e_size, dt);
+    cudaDeviceSynchronize();
+    Set_E_Y<<<numBlocksE, threadsPerBlock>>>(d_ey, d_hx, d_hz, eps, e_size, dt);
+    cudaDeviceSynchronize();
+    Set_E_Z<<<numBlocksE, threadsPerBlock>>>(d_ez, d_hy, d_hx, eps, e_size, dt);
+    cudaDeviceSynchronize();
 
     // copy back to reinitialize the wall
     cudaMemcpy(ey, d_ey, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
