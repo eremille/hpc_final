@@ -25,9 +25,23 @@ __global__ void InitWall() {
 
 }
 
-__global__ void Set_H_X(double* hx, double* ey, double* ez, double mu, int size) {
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+//calculate ex_{i,j,k} for the next time step
+//depends on: ex_{i,j,k} for the current time step, hz of adjacent cells, hy of adj. cells,
+//the time step, epsilon, and the cell steps
+//ended up using this as the general calculation for all E and H components
+__device__ double Calc(double exn, double hzp, double hzn, double hyp, double hyn, double d1, double d2, double perm, double dt) {
+    double term1, term2;
+    double t1, t2;
+    t1 = hzp - hzn;
+    term1 = t1/d1;
+    term2 = (hyp - hyn)/d2;
+    return dt*(term1-term2)/perm+exn;
+}
 
+
+__global__ void Set_H_X(double* hx, double* ey, double* ez, double mu, int size, double dt) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // don't do anything for any thread ids that are greater
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
 
@@ -35,23 +49,41 @@ __global__ void Set_H_X(double* hx, double* ey, double* ez, double mu, int size)
 		t1p = ey[tid+1];
 	  t1n = ey[tid];
 	  t2p = ez[tid+E_SIZE];
-		t2n = ez[i][j][k];
+		t2n = ez[tid];
+    hx[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
   }
 }
 
-//calculate ex_{i,j,k} for the next time step
-//depends on: ex_{i,j,k} for the current time step, hz of adjacent cells, hy of adj. cells,
-//the time step, epsilon, and the cell steps
-//ended up using this as the general calculation for all E and H components
-__device__ double calc(double exn, double hzp, double hzn,double hyp,double hyn, double d1, double d2, double perm) {
-    // double term1, term2;
-    // double t1, t2;
-    // t1 = hzp - hzn;
-    // term1 = t1/d1;
-    // term2 = (hyp - hyn)/d2;
-    // return dt*(term1-term2)/perm+exn;
-    return 0.0;
+__global__ void Set_H_Y(double* hx, double* ey, double* ez, double mu, int size, double dt) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // don't do anything for any thread ids that are greater
+  if (tid < size) {
+    double old, t1p, t1n, t2p, t2n;
+
+    old = hx[tid];
+		t1p = ey[tid+1];
+	  t1n = ey[tid];
+	  t2p = ez[tid+E_SIZE];
+		t2n = ez[tid];
+    hx[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
+  }
 }
+
+__global__ void Set_H_Z(double* hx, double* ey, double* ez, double mu, int size, double dt) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // don't do anything for any thread ids that are greater
+  if (tid < size) {
+    double old, t1p, t1n, t2p, t2n;
+
+    old = hx[tid];
+		t1p = ey[tid+1];
+	  t1n = ey[tid];
+	  t2p = ez[tid+E_SIZE];
+		t2n = ez[tid];
+    hx[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
+  }
+}
+
 
 // Used for time keeping independent of the clock
 double get_wall_time(){
@@ -318,7 +350,7 @@ int main() {
 		// 		}
 		// 	}
 		// }
-    Set_H_X<<<numBlocksH, threadsPerBlock>>>(d_hx, d_ey, d_ez, mu, h_size);
+    Set_H_X<<<numBlocksH, threadsPerBlock>>>(d_hx, d_ey, d_ez, mu, h_size, dt);
 
 
 		// Calculate the E-fields first (this allows )

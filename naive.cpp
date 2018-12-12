@@ -52,7 +52,7 @@ double calc_exijk(double exn, double hzp,double hzn,double hyp,double hyn, doubl
 
 // This is source term
 // the argument is time value
-// 
+//
 double source(double t) {
 	double val;
 	double expnum;
@@ -113,7 +113,7 @@ double calc_int(int type, int i, int j, int k) {
 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dy,mu);
 			break;
 		//case for hy (needs fixing)
-		case 4: old = hx[i][j][k];
+		case 4: old = hy[i][j][k];
 			t1p = ez[i+1][j][k];
 			t1n = ez[i][j][k];
 			t2p = ex[i][j][k+1];
@@ -121,7 +121,7 @@ double calc_int(int type, int i, int j, int k) {
 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dy,mu);
 			break;
 		//case for hz
-		case 5: old = hx[i][j][k];
+		case 5: old = hz[i][j][k];
 			t1p = ex[i][j+1][k];
 			t1n = ex[i][j][k];
 			t2p = ey[i+1][j][k];
