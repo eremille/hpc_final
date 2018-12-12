@@ -212,6 +212,7 @@ int main() {
 
 		// Every tenth time step, write out slices of e-field values to a set of files
 		if (!(a%10)) {
+      cout << ex[75][49][49] << endl;
 			for (int fn = 0; fn < 11; fn++) {
 				outind = fn*10;
 				if (outind>lx) {
