@@ -31,7 +31,7 @@ __global__ void InitWall() {
 //ended up using this as the general calculation for all E and H components
 __device__ double Calc(double exn, double hzp, double hzn, double hyp, double hyn, double d1, double d2, double perm, double dt) {
     double term1, term2;
-    double t1, t2;
+    double t1;
     t1 = hzp - hzn;
     term1 = t1/d1;
     term2 = (hyp - hyn)/d2;
@@ -42,6 +42,8 @@ __device__ double Calc(double exn, double hzp, double hzn, double hyp, double hy
 __global__ void Set_H_X(double* hx, double* ey, double* ez, double mu, int size, double dt) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   // don't do anything for any thread ids that are greater
+  dt = 1e-9;
+  printf("%f\n", dt);
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
 
@@ -54,33 +56,78 @@ __global__ void Set_H_X(double* hx, double* ey, double* ez, double mu, int size,
   }
 }
 
-__global__ void Set_H_Y(double* hx, double* ey, double* ez, double mu, int size, double dt) {
+__global__ void Set_H_Y(double* hy, double* ez, double* ex, double mu, int size, double dt) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   // don't do anything for any thread ids that are greater
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
 
-    old = hx[tid];
-		t1p = ey[tid+1];
-	  t1n = ey[tid];
-	  t2p = ez[tid+E_SIZE];
-		t2n = ez[tid];
-    hx[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
+    old = hy[tid];
+		t1p = ez[tid+E_SIZE*E_SIZE];
+	  t1n = ez[tid];
+	  t2p = ex[tid+1];
+		t2n = ex[tid];
+    hy[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
   }
 }
 
-__global__ void Set_H_Z(double* hx, double* ey, double* ez, double mu, int size, double dt) {
+__global__ void Set_H_Z(double* hz, double* ex, double* ey, double mu, int size, double dt) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   // don't do anything for any thread ids that are greater
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
 
-    old = hx[tid];
-		t1p = ey[tid+1];
-	  t1n = ey[tid];
-	  t2p = ez[tid+E_SIZE];
-		t2n = ez[tid];
-    hx[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
+    old = hz[tid];
+		t1p = ex[tid+E_SIZE];
+	  t1n = ex[tid];
+	  t2p = ey[tid+E_SIZE*E_SIZE];
+		t2n = ey[tid];
+    hz[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
+  }
+}
+
+__global__ void Set_E_X(double* ex, double* hz, double* hy, double eps, int size, double dt) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // don't do anything for any thread ids that are greater or less than first layer
+  if (tid < size && tid > E_SIZE*E_SIZE) {
+    double old, t1p, t1n, t2p, t2n;
+
+    old = ex[tid];
+		t1p = hz[tid];
+	  t1n = hz[tid-E_SIZE];
+	  t2p = hy[tid];
+		t2n = hy[tid-1];
+    ex[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+  }
+}
+
+__global__ void Set_E_Y(double* ey, double* hx, double* hz, double eps, int size, double dt) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // don't do anything for any thread ids that are greater or less than first layer
+  if (tid < size && tid > E_SIZE*E_SIZE) {
+    double old, t1p, t1n, t2p, t2n;
+
+    old = ey[tid];
+		t1p = hx[tid];
+	  t1n = hx[tid-1];
+	  t2p = hz[tid];
+		t2n = hz[tid-E_SIZE*E_SIZE];
+    ey[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+  }
+}
+
+__global__ void Set_E_Z(double* ez, double* hy, double* hx, double eps, int size, double dt) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // don't do anything for any thread ids that are greater or less than first layer
+  if (tid < size && tid > E_SIZE*E_SIZE) {
+    double old, t1p, t1n, t2p, t2n;
+
+    old = ez[tid];
+		t1p = hy[tid];
+	  t1n = hy[tid-E_SIZE*E_SIZE];
+	  t2p = hx[tid];
+		t2n = hx[tid-E_SIZE];
+    ez[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
   }
 }
 
@@ -207,16 +254,17 @@ double magn(double x, double y, double z) {
 	return mag;
 }
 // frunction to write out the magnitude of the E-field to a file
-// int write_to(ofstream& f, double t, int ind, int stride) {
-// 	f << t;
-// 	int i;
-// 	for (i = 0; i < nx; i+=stride) {
-// 		f << "\t" << magn(ex[ind][i][49],ey[ind][i][49],ez[ind][i][49]);
-// 	}
-// 	f << "\t" << ind << "\t" << i << "\t" << 49;
-// 	f << endl;
-// 	return 0;
-// }
+int write_to(ofstream& f, double t, int ind, int stride, double* ex, double* ey, double* ez) {
+	f << t;
+	int i;
+	for (i = 0; i < nx; i+=stride) {
+    int index = ind*E_SIZE*E_SIZE+i*E_SIZE+49; // middle index for 100
+		f << "\t" << magn(ex[index],ey[index],ez[index]);
+	}
+	f << "\t" << ind << "\t" << i << "\t" << 49;
+	f << endl;
+	return 0;
+}
 
 // primary simulation chunk
 int main() {
@@ -269,33 +317,23 @@ int main() {
 	//the courant condition for 1 meter is 1.9e-9
 	//final time be 1e-6 (for 1000 time steps)
 	double tf = 1e-6;
-	double t =0.0;
-	double tmp;
+	double t = 0.0;
 	int a = 0;
 
-	ofstream outFiles[11];
-	stringstream fname;
-	for (int it = 0; it < 11; it++) {
-		fname.str("");
-		fname << "output" << it << ".txt";
-		outFiles[it].open(fname.str());
-	};
+  ofstream outFiles[11];
+  stringstream fname;
+  for (int it = 0; it < 11; it++) {
+    fname.str("");
+    fname << "paraOut/output" << it << ".txt";
+    outFiles[it].open(fname.str());
+  };
 
-	double test;
-	ofstream probef;
-	probef.open("test.txt");
-	ofstream probef2;
-	probef2.open("test_h.txt");
-	//set the bounds of the loops
-	int lx, ly, lz;
+  int outind;
 
-	lx = nx - 1;
-	ly = ny - 1;
-	lz = nz - 1;
-
-	int outind;
-
-	double newex, newey, newez, newhx, newhy, newhz;
+  ofstream probef;
+  probef.open("paraOut/test.txt");
+  ofstream probef2;
+  probef2.open("paraOut/test_h.txt");
 
 	double difference, w_start, w_finish;
 
@@ -319,51 +357,47 @@ int main() {
     // after wall, might be better to do wall in CUDA
     cudaMemcpy(d_ey, ey, sizeof(double) * (e_size), cudaMemcpyHostToDevice);
 
-		// Every tenth time step, write out slices of e-field values to a set of files
-		// if (!(a%10)) {
-		// 	for (int fn = 0; fn < 11; fn++) {
-		// 		outind = fn*10;
-		// 		if (outind>lx) {
-		// 			outind = lx;
-		// 		};
-		// 		write_to(outFiles[fn], t, outind, 10);
-		// 	}
-		// 	probef << t;
-    //
-		// 	// write to a couple of debug probes placed in the center of the box
-		// 	for (int y = 45; y < 55; y+=1) {
-		// 		probef << "\t" << ex[49][49][y];
-		// 		probef2 << "\t" << hy[y][49][49];
-		// 	};
-		// 	probef << endl;
-		// 	probef2 << endl;
-		// };
-
-
-		// // Calculate H-fields
-		// for (int l = 0; l < lx; l++) {
-		// 	for (int m = 0; m < ly; m++) {
-		// 		for (int n = 0; n < lz; n++) {
-		// 			hx[l][m][n] = calc_int(h_x,l,m,n);
-		// 			hy[l][m][n] = calc_int(h_y,l,m,n);
-		// 			hz[l][m][n] = calc_int(h_z,l,m,n);
-		// 		}
-		// 	}
-		// }
     Set_H_X<<<numBlocksH, threadsPerBlock>>>(d_hx, d_ey, d_ez, mu, h_size, dt);
+    cudaDeviceSynchronize();
+    // Set_H_Y<<<numBlocksH, threadsPerBlock>>>(d_hy, d_ez, d_ex, mu, h_size, dt);
+    // cudaDeviceSynchronize();
+    // Set_H_Z<<<numBlocksH, threadsPerBlock>>>(d_hz, d_ex, d_ey, mu, h_size, dt);
+    // cudaDeviceSynchronize();
+    //
+    // Set_E_X<<<numBlocksE, threadsPerBlock>>>(d_ex, d_hz, d_hy, eps, e_size, dt);
+    // cudaDeviceSynchronize();
+    // Set_E_Y<<<numBlocksE, threadsPerBlock>>>(d_ey, d_hx, d_hz, eps, e_size, dt);
+    // cudaDeviceSynchronize();
+    // Set_E_Z<<<numBlocksE, threadsPerBlock>>>(d_ez, d_hy, d_hx, eps, e_size, dt);
+    // cudaDeviceSynchronize();
 
+    // copy back to reinitialize the wall
+    cudaMemcpy(ey, d_ey, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
 
-		// Calculate the E-fields first (this allows )
-		// loop bounds for E-fields are 1 to Nx-1 to avoid overwritting the boundary conditions
-		// for (int i = 1; i < lx; i++) {
-		// 	for (int j = 1; j < ly; j++) {
-		// 		for (int k = 1; k < lz; k++) {
-		// 			ex[i][j][k] = calc_int(e_x,i,j,k);
-		// 			ey[i][j][k] = calc_int(e_y,i,j,k);;
-		// 			ez[i][j][k] = calc_int(e_z,i,j,k);
-		// 		}
-		// 	}
-		// }
+    // Every tenth time step, write out slices of e-field values to a set of files
+    if (!(a%10)) {
+      cudaMemcpy(ex, d_ex, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
+      cudaMemcpy(ez, d_ez, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
+      cout << ex[80949] << endl;
+    	for (int fn = 0; fn < 11; fn++) {
+    		outind = fn*10;
+    		if (outind > 99) {
+    			outind = 99;
+    		}
+    		write_to(outFiles[fn], t, outind, 10, ex, ey, ez);
+    	}
+    	probef << t;
+
+    	// write to a couple of debug probes placed in the center of the box
+    	for (int y = 45; y < 55; y+=1) {
+        int ex_index = 49*E_SIZE*E_SIZE+49*E_SIZE+y;
+        int hy_index = y*H_SIZE*H_SIZE+49*H_SIZE+49;
+    		probef << "\t" << ex[ex_index];
+    		probef2 << "\t" << hy[hy_index];
+    	};
+    	probef << endl;
+    	probef2 << endl;
+    };
 
 		t += dt; // time step counter
 		a += 1; // printing counter
@@ -373,14 +407,14 @@ int main() {
 
     cout << "Parallel: " << difference << " seconds\n";
 
-	// probef.flush();
-	// probef.close();
-	// probef2.flush();
-	// probef2.close();
-	// for (int it = 0; it < 11; it++) {
-	// 	outFiles[it].flush();
-	// 	outFiles[it].close();
-	// };
+	probef.flush();
+	probef.close();
+	probef2.flush();
+	probef2.close();
+	for (int it = 0; it < 11; it++) {
+		outFiles[it].flush();
+		outFiles[it].close();
+	};
 
 	return 0;
 }

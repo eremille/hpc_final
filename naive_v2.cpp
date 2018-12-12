@@ -46,7 +46,7 @@ enum Field {e_x, e_y, e_z, h_x, h_y, h_z};
 //ended up using this as the general calculation for all E and H components
 double calc_exijk(double exn, double hzp, double hzn,double hyp,double hyn, double d1, double d2, double perm) {
 	double term1, term2;
-	double t1, t2;
+	double t1;
 	t1 = hzp - hzn;
 	term1 = t1/d1;
 	term2 = (hyp - hyn)/d2;
@@ -213,6 +213,7 @@ int main() {
 
 		// Every tenth time step, write out slices of e-field values to a set of files
 		if (!(a%10)) {
+      cout << ex[76][49][49] << endl;
 			for (int fn = 0; fn < 11; fn++) {
 				outind = fn*10;
 				if (outind>lx) {
