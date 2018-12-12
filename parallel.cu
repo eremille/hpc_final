@@ -44,11 +44,12 @@ __global__ void Set_H_X(double* hx, double* ey, double* ez, double mu, int size,
   // don't do anything for any thread ids that are greater
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
+    int y_offset = E_SIZE;
 
     old = hx[tid];
 		t1p = ey[tid+1];
 	  t1n = ey[tid];
-	  t2p = ez[tid+E_SIZE];
+	  t2p = ez[tid+y_offset];
 		t2n = ez[tid];
     hx[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
   }
@@ -59,9 +60,9 @@ __global__ void Set_H_Y(double* hy, double* ez, double* ex, double mu, int size,
   // don't do anything for any thread ids that are greater
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
-
+    int x_offset = E_SIZE*E_SIZE;
     old = hy[tid];
-		t1p = ez[tid+E_SIZE*E_SIZE];
+		t1p = ez[tid+x_offset];
 	  t1n = ez[tid];
 	  t2p = ex[tid+1];
 		t2n = ex[tid];
@@ -74,58 +75,139 @@ __global__ void Set_H_Z(double* hz, double* ex, double* ey, double mu, int size,
   // don't do anything for any thread ids that are greater
   if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
+    int x_offset = E_SIZE*E_SIZE;
+    int y_offset = E_SIZE;
 
     old = hz[tid];
-		t1p = ex[tid+E_SIZE];
+		t1p = ex[tid+y_offset];
 	  t1n = ex[tid];
-	  t2p = ey[tid+E_SIZE*E_SIZE];
+	  t2p = ey[tid+x_offset];
 		t2n = ey[tid];
     hz[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,mu,dt);
   }
 }
 
-__global__ void Set_E_X(double* ex, double* hz, double* hy, double eps, int size, double dt) {
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  // don't do anything for any thread ids that are greater or less than first layer
-  if (tid < size && tid > E_SIZE*E_SIZE) {
-    double old, t1p, t1n, t2p, t2n;
+// __global__ void Set_E_X(double* ex, double* hz, double* hy, double eps, int size, double dt) {
+//   int tid = blockIdx.x * blockDim.x + threadIdx.x;
+//   // respect the border
+//   int n = 100;
+//   int n2 = 10000;
+//   int n3 = 1000000;
+//   if (tid >= size ||((tid < n2) || (tid > (n3-n2))) || (((0 < tid%n2) && (tid%n2 < n)) || ((n2-n < tid%n2) && (tid%n2 < n2-1))) || ((tid%n == 0) || (tid%n == n-1))){}
+//   // if ((tid < n2) || (tid > (n3-n2))){}
+//   // else if (((0 < tid%n2) && (tid%n2 < n)) || ((n2-n < tid%n2) && (tid%n2 < n2-1))){}
+//   // else if ((tid%n == 0) || (tid%n == n-1)){}
+//   else {
+//     // printf("%d\n", tid);
+//     double old, t1p, t1n, t2p, t2n;
+//
+//     old = ex[tid];
+// 		t1p = hz[tid];
+// 	  t1n = hz[tid-H_SIZE];
+// 	  t2p = hy[tid];
+// 		t2n = hy[tid-1];
+//     ex[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+//   }
+// }
+//
+// __global__ void Set_E_Y(double* ey, double* hx, double* hz, double eps, int size, double dt) {
+//   int tid = blockIdx.x * blockDim.x + threadIdx.x;
+//   // respect the border
+//   // int n = E_SIZE;
+//   // int n2 = E_SIZE*E_SIZE;
+//   // int n3 = n2 * E_SIZE;
+//
+//   int n = 100;
+//   int n2 = 10000;
+//   int n3 = 1000000;
+//   if (tid >= size ||((tid < n2) || (tid > (n3-n2))) || (((0 < tid%n2) && (tid%n2 < n)) || ((n2-n < tid%n2) && (tid%n2 < n2-1))) || ((tid%n == 0) || (tid%n == n-1))){}
+//   //
+//   // if ((tid < n2) || (tid > (n3-n2))){}
+//   // else if (((0 < tid%n2) && (tid%n2 < n)) || ((n2-n < tid%n2) && (tid%n2 < n2-1))){}
+//   // else if ((tid%n == 0) || (tid%n == n-1)){}
+//   else {
+//     double old, t1p, t1n, t2p, t2n;
+//
+//     old = ey[tid];
+// 		t1p = hx[tid];
+// 	  t1n = hx[tid-1];
+// 	  t2p = hz[tid];
+// 		t2n = hz[tid-H_SIZE*H_SIZE];
+//     ey[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+//   }
+// }
+//
+// __global__ void Set_E_Z(double* ez, double* hy, double* hx, double eps, int size, double dt) {
+//   int tid = blockIdx.x * blockDim.x + threadIdx.x;
+//   // respect the border
+//   // int n = E_SIZE;
+//   // int n2 = E_SIZE*E_SIZE;
+//   // int n3 = n2 * E_SIZE;
+//
+//   int n = 100;
+//   int n2 = 10000;
+//   int n3 = 1000000;
+//   if (tid >= size ||((tid < n2) || (tid > (n3-n2))) || (((0 < tid%n2) && (tid%n2 < n)) || ((n2-n < tid%n2) && (tid%n2 < n2-1))) || ((tid%n == 0) || (tid%n == n-1))){}
+//   //
+//   // if ((tid < n2) || (tid > (n3-n2))){}
+//   // else if (((0 < tid%n2) && (tid%n2 < n)) || ((n2-n < tid%n2) && (tid%n2 < n2-1))){}
+//   // else if ((tid%n == 0) || (tid%n == n-1)){}
+//   else {
+//     double old, t1p, t1n, t2p, t2n;
+//
+//     old = ez[tid];
+// 		t1p = hy[tid];
+// 	  t1n = hy[tid-H_SIZE*H_SIZE];
+// 	  t2p = hx[tid];
+// 		t2n = hx[tid-H_SIZE];
+//     ez[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+//   }
+// }
 
-    old = ex[tid];
-		t1p = hz[tid];
-	  t1n = hz[tid-H_SIZE];
-	  t2p = hy[tid];
-		t2n = hy[tid-1];
-    ex[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+__global__ void Set_E_X(double* ex, double* hz, double* hy, double eps, int size, double dt, int* inner_indices) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // respect the border
+
+  if (tid < size) {
+    // printf("%d\n", tid);
+    double old, t1p, t1n, t2p, t2n;
+    int index = inner_indices[tid];
+    old = ex[index];
+		t1p = hz[index];
+	  t1n = hz[index-99];
+	  t2p = hy[index];
+		t2n = hy[index-1];
+    ex[index] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
   }
 }
 
-__global__ void Set_E_Y(double* ey, double* hx, double* hz, double eps, int size, double dt) {
+__global__ void Set_E_Y(double* ey, double* hx, double* hz, double eps, int size, double dt, int* inner_indices) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  // don't do anything for any thread ids that are greater or less than first layer
-  if (tid < size && tid > E_SIZE*E_SIZE) {
+  // respect the border
+  if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
-
-    old = ey[tid];
-		t1p = hx[tid];
-	  t1n = hx[tid-1];
-	  t2p = hz[tid];
-		t2n = hz[tid-H_SIZE*H_SIZE];
-    ey[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+    int index = inner_indices[tid];
+    old = ey[index];
+		t1p = hx[index];
+	  t1n = hx[index-1];
+	  t2p = hz[index];
+		t2n = hz[index-99*99];
+    ey[index] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
   }
 }
 
-__global__ void Set_E_Z(double* ez, double* hy, double* hx, double eps, int size, double dt) {
+__global__ void Set_E_Z(double* ez, double* hy, double* hx, double eps, int size, double dt, int* inner_indices) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  // don't do anything for any thread ids that are greater or less than first layer
-  if (tid < size && tid > E_SIZE*E_SIZE) {
+  // respect the border
+  if (tid < size) {
     double old, t1p, t1n, t2p, t2n;
-
-    old = ez[tid];
-		t1p = hy[tid];
-	  t1n = hy[tid-H_SIZE*H_SIZE];
-	  t2p = hx[tid];
-		t2n = hx[tid-H_SIZE];
-    ez[tid] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
+    int index = inner_indices[tid];
+    old = ez[index];
+		t1p = hy[index];
+	  t1n = hy[index-99*99];
+	  t2p = hx[index];
+		t2n = hx[index-99];
+    ez[index] = Calc(old,t1p,t1n,t2p,t2n,1.0,1.0,eps,dt);
   }
 }
 
@@ -174,79 +256,10 @@ double source(double t) {
 // 	double dt, int i, int j, int k)
 
 
-
-
-// double calc_int(Field type, int i, int j, int k) {
-// 	double next_val;
-// 	double old, t1p, t1n, t2p, t2n;
-//
-// 	switch(type) {
-// 		//case for ex
-// 		case e_x: old = ex[i][j][k];
-// 			t1p = hz[i][j][k];
-// 			t1n = hz[i][j-1][k];
-// 			t2p = hy[i][j][k];
-// 			t2n = hy[i][j][k-1];
-// 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dy,dx,eps);
-// 			break;
-// 		//case for ey
-// 		case e_y: old = ey[i][j][k];
-// 			t1p = hx[i][j][k];
-// 			t1n = hx[i][j][k-1];
-// 			t2p = hz[i][j][k];
-// 			t2n = hz[i-1][j][k];
-// 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dx,eps);
-// 			break;
-// 		//case for ez
-// 		case e_z: old = ez[i][j][k];
-// 			t1p = hy[i][j][k];
-// 			t1n = hy[i-1][j][k];
-// 			t2p = hx[i][j][k];
-// 			t2n = hx[i][j-1][k];
-// 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dx,dy,eps);
-// 			break;
-// 		//case for hx
-// 		case h_x: old = hx[i][j][k];
-// 			t1p = ey[i][j][k+1];
-// 			t1n = ey[i][j][k];
-// 			t2p = ez[i][j+1][k];
-// 			t2n = ez[i][j][k];
-// 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dy,mu);
-// 			break;
-// 		//case for hy (needs fixing)
-// 		case h_y: old = hx[i][j][k];
-// 			t1p = ez[i+1][j][k];
-// 			t1n = ez[i][j][k];
-// 			t2p = ex[i][j][k+1];
-// 			t2n = ex[i][j][k];
-// 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dy,mu);
-// 			break;
-// 		//case for hz
-// 		case h_z: old = hx[i][j][k];
-// 			t1p = ex[i][j+1][k];
-// 			t1n = ex[i][j][k];
-// 			t2p = ey[i+1][j][k];
-// 			t2n = ey[i][j][k];
-// 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dy,dx,mu);
-// 			break;
-// 	}
-// 	// cout << "type: " << type << endl;
-// 	// cout << "indices: " << i <<" "<< j <<" "<< k << endl;
-// 	// cout << next_val << endl;
-// 	// cout << "t1p: " << t1p << endl;
-// 	// cout << "t1n: " << t1n << endl;
-// 	// cout << "t2p: " << t2p << endl;
-// 	// cout << "t2n: " << t2n << endl << endl;
-// 	return next_val;
-// };
-
-
-
-
-//
 //function to calculate the magnitude of a 3-vector
 //used to write out results, not part of simulation
 double magn(double x, double y, double z) {
+  // cout << x << ' ' << y << ' ' << z << endl;
 	double mag;
 	mag = sqrt(x*x+y*y+z*z);
 	return mag;
@@ -270,8 +283,10 @@ int main() {
 	double mu = 1.257e-6;
 
   double *ex, *ey, *ez, *hx, *hy, *hz;
+  int *inner_indices;
   int e_size = E_SIZE*E_SIZE*E_SIZE;
   int h_size = H_SIZE*H_SIZE*H_SIZE;
+  int i_size = 98*98*98;
 
   ex = (double *)malloc((e_size)*sizeof(double));
   ey = (double *)malloc((e_size)*sizeof(double));
@@ -280,21 +295,24 @@ int main() {
   hy = (double *)malloc((h_size)*sizeof(double));
   hz = (double *)malloc((h_size)*sizeof(double));
 
+  inner_indices = (int *)malloc((i_size)*sizeof(int));
+
   // initialize to zero
   for (int i = 0; i < e_size; i++) {
-    ex[i] = 0;
-    ey[i] = 0;
-    ez[i] = 0;
+    ex[i] = 0.0;
+    ey[i] = 0.0;
+    ez[i] = 0.0;
   }
 
   for (int i = 0; i < h_size; i++) {
-    hx[i] = 0;
-    hy[i] = 0;
-    hz[i] = 0;
+    hx[i] = 0.0;
+    hy[i] = 0.0;
+    hz[i] = 0.0;
   }
 
   // cuda variables
   double *d_ex, *d_ey, *d_ez, *d_hx, *d_hy, *d_hz;
+  int *d_inner;
 
   cudaMalloc((void **)&d_ex, sizeof(double) * (e_size));
   cudaMalloc((void **)&d_ey, sizeof(double) * (e_size));
@@ -302,6 +320,7 @@ int main() {
   cudaMalloc((void **)&d_hx, sizeof(double) * (h_size));
   cudaMalloc((void **)&d_hy, sizeof(double) * (h_size));
   cudaMalloc((void **)&d_hz, sizeof(double) * (h_size));
+  cudaMalloc((void **)&d_inner, sizeof(int) * (i_size));
 
   cudaMemcpy(d_ex, ex, sizeof(double) * (e_size), cudaMemcpyHostToDevice);
   cudaMemcpy(d_ey, ey, sizeof(double) * (e_size), cudaMemcpyHostToDevice);
@@ -345,7 +364,26 @@ int main() {
 
   int numBlocksE = e_size/BLOCK+1;
   int numBlocksH = h_size/BLOCK+1;
+  int numBlocksI = i_size/BLOCK+1;
   dim3 threadsPerBlock(BLOCK, 1); // Max one dimensional block
+
+  int n = 100;
+  int n2 = 10000;
+  int n3 = 1000000;
+
+  int count = 0;
+
+  for (int i = 0; i < e_size; i++) {
+    if ((i < n2) || (i > (n3-n2))){}
+    else if (((0 < i%n2) && (i%n2 < n)) || ((n2-n < i%n2) && (i%n2 < n2-1))){}
+    else if ((i%n == 0) || (i%n == n-1)){}
+    else {
+      inner_indices[count] = i;
+      count++;
+    }
+  }
+
+  cudaMemcpy(d_inner, inner_indices, sizeof(int) * (i_size), cudaMemcpyHostToDevice);
 
 	while (t<tf) {
 		cout << "t = " <<t <<endl;
@@ -368,11 +406,19 @@ int main() {
     Set_H_Z<<<numBlocksH, threadsPerBlock>>>(d_hz, d_ex, d_ey, mu, h_size, dt);
     cudaDeviceSynchronize();
 
-    Set_E_X<<<numBlocksE, threadsPerBlock>>>(d_ex, d_hz, d_hy, eps, e_size, dt);
+
+    // Set_E_X<<<numBlocksE, threadsPerBlock>>>(d_ex, d_hz, d_hy, eps, e_size, dt);
+    // cudaDeviceSynchronize();
+    // Set_E_Y<<<numBlocksE, threadsPerBlock>>>(d_ey, d_hx, d_hz, eps, e_size, dt);
+    // cudaDeviceSynchronize();
+    // Set_E_Z<<<numBlocksE, threadsPerBlock>>>(d_ez, d_hy, d_hx, eps, e_size, dt);
+    // cudaDeviceSynchronize();
+
+    Set_E_X<<<numBlocksI, threadsPerBlock>>>(d_ex, d_hz, d_hy, eps, i_size, dt, d_inner);
     cudaDeviceSynchronize();
-    Set_E_Y<<<numBlocksE, threadsPerBlock>>>(d_ey, d_hx, d_hz, eps, e_size, dt);
+    Set_E_Y<<<numBlocksI, threadsPerBlock>>>(d_ey, d_hx, d_hz, eps, i_size, dt, d_inner);
     cudaDeviceSynchronize();
-    Set_E_Z<<<numBlocksE, threadsPerBlock>>>(d_ez, d_hy, d_hx, eps, e_size, dt);
+    Set_E_Z<<<numBlocksI, threadsPerBlock>>>(d_ez, d_hy, d_hx, eps, i_size, dt, d_inner);
     cudaDeviceSynchronize();
 
     // copy back to reinitialize the wall
@@ -382,7 +428,7 @@ int main() {
     if (!(a%10)) {
       cudaMemcpy(ex, d_ex, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
       cudaMemcpy(ez, d_ez, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
-      cout << ex[80949] << endl;
+      cudaMemcpy(hy, d_hy, sizeof(double) * h_size, cudaMemcpyDeviceToHost);
     	for (int fn = 0; fn < 11; fn++) {
     		outind = fn*10;
     		if (outind > 99) {

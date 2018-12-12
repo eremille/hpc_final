@@ -170,22 +170,21 @@ int main() {
 	//final time be 1e-6 (for 1000 time steps)
 	double tf = 1e-6;
 	double t =0.0;
-	double tmp;
 	int a = 0;
 
 	ofstream outFiles[11];
 	stringstream fname;
 	for (int it = 0; it < 11; it++) {
 		fname.str("");
-		fname << "output" << it << ".txt";
+		fname << "serOut/output" << it << ".txt";
 		outFiles[it].open(fname.str());
 	};
 
 	double test;
 	ofstream probef;
-	probef.open("test.txt");
+	probef.open("serOut/test.txt");
 	ofstream probef2;
-	probef2.open("test_h.txt");
+	probef2.open("serOut/test_h.txt");
 	//set the bounds of the loops
 	int lx, ly, lz;
 
@@ -213,7 +212,6 @@ int main() {
 
 		// Every tenth time step, write out slices of e-field values to a set of files
 		if (!(a%10)) {
-      cout << ex[76][49][49] << endl;
 			for (int fn = 0; fn < 11; fn++) {
 				outind = fn*10;
 				if (outind>lx) {
