@@ -410,12 +410,18 @@ int main() {
 		// set the source value for the incoming plane wave at x boundary
 		double ey_init = source(t);
 
-    InitWall<<<10,1000>>>(d_ey, ey_init);
+    // InitWall<<<10,1000>>>(d_ey, ey_init);
+
+    for (int g = 0; g < ny; g++) {
+      for (int h = 0; h < nz; h++) {
+        int index = g*100 + h;
+        ey[index] = ey_init;
+      }
+    }
 
     // Every tenth time step, write out slices of e-field values to a set of files
     if (!(a%10)) {
       cudaMemcpy(ex, d_ex, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
-      cudaMemcpy(ey, d_ey, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
       cudaMemcpy(ez, d_ez, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
       cudaMemcpy(hy, d_hy, sizeof(double) * h_size, cudaMemcpyDeviceToHost);
       for (int fn = 0; fn < 11; fn++) {
@@ -439,7 +445,7 @@ int main() {
     };
 
     // after wall, might be better to do wall in CUDA
-    // cudaMemcpy(d_ey, ey, sizeof(double) * (e_size), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_ey, ey, sizeof(double) * (e_size), cudaMemcpyHostToDevice);
 
     Set_H_X<<<numBlocksH, threadsPerBlock>>>(d_hx, d_ey, d_ez, mu, h_size, dt);
     cudaDeviceSynchronize();
@@ -456,7 +462,8 @@ int main() {
     Set_E_Z<<<numBlocksI, threadsPerBlock>>>(d_ez, d_hy, d_hx, eps, i_size, dt, d_inner);
     cudaDeviceSynchronize();
 
-
+    // bring back for wall
+    cudaMemcpy(ey, d_ey, sizeof(double) * e_size, cudaMemcpyDeviceToHost);
 		t += dt; // time step counter
 		a += 1; // printing counter
 	}
