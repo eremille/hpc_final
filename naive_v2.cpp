@@ -116,7 +116,7 @@ double calc_int(Field type, int i, int j, int k) {
 			t1n = ez[i][j][k];
 			t2p = ex[i][j][k+1];
 			t2n = ex[i][j][k];
-			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dy,mu);
+			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dx,dz,mu);
 			break;
 		//case for hz
 		case h_z: old = hz[i][j][k];

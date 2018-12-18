@@ -112,13 +112,13 @@ double calc_int(int type, int i, int j, int k) {
 			t2n = ez[i][j][k];
 			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dy,mu);
 			break;
-		//case for hy (needs fixing)
+		//case for hy
 		case 4: old = hy[i][j][k];
 			t1p = ez[i+1][j][k];
 			t1n = ez[i][j][k];
 			t2p = ex[i][j][k+1];
 			t2n = ex[i][j][k];
-			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dz,dy,mu);
+			next_val = calc_exijk(old,t1p,t1n,t2p,t2n,dx,dz,mu);
 			break;
 		//case for hz
 		case 5: old = hz[i][j][k];
