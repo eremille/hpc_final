@@ -230,7 +230,7 @@ double magn(double x, double y, double z) {
 int write_to(ofstream& f, double t, int ind, int stride, double* ex, double* ey, double* ez) {
 	f << t;
 	int i;
-	for (i = 0; i < nx; i+=stride) {
+	for (i = 0; i < EX_SIZE; i+=stride) {
     int index = ind*EY_SIZE*EZ_SIZE+i*EZ_SIZE+EZ_SIZE/2-1; // middle index for 100
 		f << "\t" << magn(ex[index],ey[index],ez[index]);
 	}
@@ -251,7 +251,7 @@ int main() {
   double *ex, *ey, *ez, *hx, *hy, *hz;
   int *inner_indices;
   int e_size = EX_SIZE*EY_SIZE*EZ_SIZE;
-  int h_size = H_SIZE*H_SIZE*H_SIZE;
+  int h_size = HX_SIZE*HY_SIZE*HZ_SIZE;
   int i_size = (EX_SIZE-2)*(EY_SIZE-2)*(EZ_SIZE-2);
   int s_size = EY_SIZE*EZ_SIZE;
 
@@ -329,9 +329,9 @@ int main() {
   int count = 0;
 
   // keep track of the inner indices to respect the boundaries of the E-field
-  for (int i = 1; i < H_SIZE; i++) {
-    for (int j = 1; j < H_SIZE; j++) {
-      for (int k = 1; k < H_SIZE; k++) {
+  for (int i = 1; i < HX_SIZE; i++) {
+    for (int j = 1; j < HY_SIZE; j++) {
+      for (int k = 1; k < HZ_SIZE; k++) {
         inner_indices[count] = i*EY_SIZE*EZ_SIZE+j*EZ_SIZE+k;
         count++;
       }
@@ -345,7 +345,7 @@ int main() {
 		// set the source value for the incoming plane wave at x boundary
 		double ey_init = source(t);
 
-    InitWall<<<s_size,threadsPerBlock>>>(d_ey, ey_init, s_size);
+    InitWall<<<numBlocksS,threadsPerBlock>>>(d_ey, ey_init, s_size);
 
     // Every tenth time step, write out slices of e-field values to a set of files
     if (!(out_index%10)) {
